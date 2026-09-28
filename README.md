@@ -105,10 +105,10 @@ Everything added to the language after C# 9, marked with whether it works in Uni
 
 | Status | Features |
 |---|---|
-| ✅ Works | 30 |
+| ✅ Works | 29 |
 | 🧩 Needs a polyfill | 5 |
 | ⚠️ With caveats | 2 |
-| ❌ Doesn't work | 4 |
+| ❌ Doesn't work | 5 |
 
 ### C# 10
 
@@ -356,9 +356,11 @@ Log.Trace($"pos={transform.position} vel={_body.velocity}");
 
 #### [AsyncMethodBuilder] on methods
 
-**✅ Works**
+**❌ Doesn't work**
 
-**Where:** mostly in libraries. Lets a single async method use its own builder, e.g. a pooling one that avoids allocating the state machine. UniTask uses this mechanism.
+**Would be used for:** mostly libraries. Lets a single async method use its own builder, e.g. a pooling one that avoids allocating the state machine.
+
+> Doesn't compile: `error CS0592`. In `netstandard2.1`, `AsyncMethodBuilderAttribute` is allowed only on types; methods were added in .NET 6. A polyfill can't fix it: the type already exists, so a local copy only compiles with the CS0436 conflict warning. On types the attribute works, which is how UniTask declares its task types.
 
 ```csharp
 [AsyncMethodBuilder(typeof(PooledTaskBuilder))]
