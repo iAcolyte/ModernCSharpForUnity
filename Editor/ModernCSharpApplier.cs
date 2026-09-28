@@ -20,7 +20,7 @@ public enum AsmdefStatus {
 public static class ModernCSharpApplier {
     public const string RootRspPath = "Assets/csc.rsp";
 
-    static readonly string[] PackageAssemblies = { "ModernCSharp.Editor" };
+    static readonly string[] PackageAssemblies = { "ModernCSharp.Editor", "ModernCSharp.Editor.Tests" };
 
     public static void ApplyAll() => Apply(FindAsmdefs(), includeRoot: true);
 

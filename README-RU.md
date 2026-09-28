@@ -30,13 +30,14 @@ Editor/
 ├── ModernCSharpSettingsProvider.cs # Project Settings → C# Language
 ├── ModernCSharpApplier.cs          # запись csc.rsp
 └── AsmdefWatcher.cs                # автообновление при добавлении asmdef
+Tests/Editor/                       # EditMode-тесты логики Editor
 Generators~/
 └── ModernCSharp.Generators.dll     # генератор заглушек, Unity его не видит
-Source~/                            # исходники генератора, Unity их не видит
-├── ModernCSharp.Generators.csproj
-├── PolyfillGenerator.cs
-├── Polyfills.cs
-└── build.sh                        # собирает DLL в Generators~/
+Source~/                            # Unity её не видит
+├── ModernCSharp.sln
+├── build.sh                        # собирает DLL в Generators~/
+├── ModernCSharp.Generators/        # исходники генератора
+└── ModernCSharp.Generators.Tests/  # тесты генератора и матрица фич
 ```
 
 ## Настройки
@@ -835,7 +836,7 @@ public static void Log_Intercepted(string msg) { }
 
 ## Заглушки
 
-Генератор создаёт их как `internal`-типы, исходники лежат в [`Source~/Polyfills.cs`](Source~/Polyfills.cs).
+Генератор создаёт их как `internal`-типы, исходники лежат в [`Source~/ModernCSharp.Generators/Polyfills.cs`](Source~/ModernCSharp.Generators/Polyfills.cs).
 
 | Тип | Пространство имён | Для чего |
 |---|---|---|
@@ -872,6 +873,25 @@ public static void Log_Intercepted(string msg) { }
 ---
 
 Статусы проверены компиляцией Roslyn 4.10 из Unity 6000.6.3f1 под `netstandard2.1`. Поведение во время выполнения в Mono и IL2CPP отдельно не проверялось.
+
+## Тесты
+
+**Генератор и матрица фич** (`Source~/`, обычный .NET, запускается в CI на каждый пуш):
+
+```
+dotnet test "Source~/ModernCSharp.sln"
+```
+
+- генератор создаёт все заглушки как `internal`, пропускает типы, которые сборка уже видит, и ссылается на Roslyn не новее, чем в Unity;
+- у каждой фичи из раздела [C# 10–12 в Unity](#c-1012-в-unity) есть сниппет в `Source~/ModernCSharp.Generators.Tests/Features/`. Он компилируется Roslyn 4.10 под `netstandard2.1`, как в Unity 6000.6. Тест проверяет статус из README и падает, если README и сниппеты расходятся.
+
+Когда Unity обновит компилятор, подними версию `Microsoft.CodeAnalysis.CSharp` в тестовом проекте и посмотри, какие статусы изменились.
+
+**Логика Editor** (`Tests/Editor/`, Unity Test Framework, EditMode): работа с `csc.rsp`, define-символы и фильтр путей. Чтобы запускать их в своём проекте, добавь пакет в `testables` в `Packages/manifest.json`:
+
+```json
+"testables": ["com.iacolyte.modern-csharp"]
+```
 
 ## Лицензия
 

@@ -30,13 +30,14 @@ Editor/
 ├── ModernCSharpSettingsProvider.cs # Project Settings → C# Language
 ├── ModernCSharpApplier.cs          # writes csc.rsp files
 └── AsmdefWatcher.cs                # auto-updates when an asmdef is added
+Tests/Editor/                       # EditMode tests of the Editor logic
 Generators~/
 └── ModernCSharp.Generators.dll     # polyfill source generator, hidden from Unity
-Source~/                            # generator sources, hidden from Unity
-├── ModernCSharp.Generators.csproj
-├── PolyfillGenerator.cs
-├── Polyfills.cs
-└── build.sh                        # builds the DLL into Generators~/
+Source~/                            # hidden from Unity
+├── ModernCSharp.sln
+├── build.sh                        # builds the DLL into Generators~/
+├── ModernCSharp.Generators/        # generator sources
+└── ModernCSharp.Generators.Tests/  # generator tests and the feature matrix
 ```
 
 ## Settings
@@ -835,7 +836,7 @@ public static void Log_Intercepted(string msg) { }
 
 ## Polyfills
 
-The generator emits them as `internal` types; the sources are in [`Source~/Polyfills.cs`](Source~/Polyfills.cs).
+The generator emits them as `internal` types; the sources are in [`Source~/ModernCSharp.Generators/Polyfills.cs`](Source~/ModernCSharp.Generators/Polyfills.cs).
 
 | Type | Namespace | Used for |
 |---|---|---|
@@ -872,6 +873,25 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 ---
 
 Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. Runtime behavior in Mono and IL2CPP was not tested separately.
+
+## Tests
+
+**Generator and feature matrix** (`Source~/`, plain .NET, runs in CI on every push):
+
+```
+dotnet test "Source~/ModernCSharp.sln"
+```
+
+- the generator emits every polyfill as `internal`, skips types the assembly already sees and references Roslyn no newer than Unity's;
+- every feature from [C# 10–12 in Unity](#c-1012-in-unity) has a snippet in `Source~/ModernCSharp.Generators.Tests/Features/`, compiled with Roslyn 4.10 against `netstandard2.1`, the way Unity 6000.6 compiles it. The test checks the status from this README and fails if the README and the snippets disagree.
+
+When Unity updates its compiler, raise `Microsoft.CodeAnalysis.CSharp` in the test project and see which statuses change.
+
+**Editor logic** (`Tests/Editor/`, Unity Test Framework, EditMode): `csc.rsp` handling, define symbols and the path filter. To run them in your project, add the package to `testables` in `Packages/manifest.json`:
+
+```json
+"testables": ["com.iacolyte.modern-csharp"]
+```
 
 ## License
 
