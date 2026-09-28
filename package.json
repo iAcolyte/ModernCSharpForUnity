@@ -4,5 +4,9 @@
   "displayName": "Modern C# for Unity",
   "description": "Enables C# 10–12 in Unity: a Project Settings page that manages csc.rsp next to each assembly definition and a source generator that adds the polyfills for compiler-required types.",
   "unity": "6000.0",
+  "license": "MIT",
+  "author": {
+    "name": "Alexander Gorozhankin"
+  },
   "keywords": ["csharp", "langversion", "nullable", "polyfill", "csc.rsp"]
 }

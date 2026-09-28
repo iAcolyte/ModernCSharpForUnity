@@ -850,3 +850,7 @@ public static void Log_Intercepted(string msg) { }
 ---
 
 Статусы проверены компиляцией Roslyn 4.10 из Unity 6000.6.3f1 под `netstandard2.1`. Поведение во время выполнения в Mono и IL2CPP отдельно не проверялось.
+
+## Лицензия
+
+[MIT](LICENSE.md) © 2026 Alexander Gorozhankin

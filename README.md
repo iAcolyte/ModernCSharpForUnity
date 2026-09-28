@@ -850,3 +850,7 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 ---
 
 Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. Runtime behavior in Mono and IL2CPP was not tested separately.
+
+## License
+
+[MIT](LICENSE.md) © 2026 Alexander Gorozhankin
