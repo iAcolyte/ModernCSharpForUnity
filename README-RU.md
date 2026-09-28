@@ -10,13 +10,13 @@ Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–12 
 **Window → Package Manager → + → Add package from git URL** и адрес репозитория:
 
 ```
-https://github.com/iacolyte/unity-modern-csharp.git
+https://github.com/iAcolyte/ModernCSharpForUnity.git
 ```
 
-Конкретная версия подключается по тегу: `https://github.com/iacolyte/unity-modern-csharp.git#v0.1.0`. То же самое можно прописать в `Packages/manifest.json`:
+Конкретная версия подключается по тегу: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0`. То же самое можно прописать в `Packages/manifest.json`:
 
 ```json
-"com.iacolyte.modern-csharp": "https://github.com/iacolyte/unity-modern-csharp.git#v0.1.0"
+"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0"
 ```
 
 Требуется Unity 6000.0 или новее.

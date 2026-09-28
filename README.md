@@ -10,13 +10,13 @@ The `com.iacolyte.modern-csharp` Unity package enables C# 10–12 and nullable r
 Open **Window → Package Manager → + → Add package from git URL** and enter the repository URL:
 
 ```
-https://github.com/iacolyte/unity-modern-csharp.git
+https://github.com/iAcolyte/ModernCSharpForUnity.git
 ```
 
-To pin a specific version, add a tag: `https://github.com/iacolyte/unity-modern-csharp.git#v0.1.0`. You can also add it to `Packages/manifest.json`:
+To pin a specific version, add a tag: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0`. You can also add it to `Packages/manifest.json`:
 
 ```json
-"com.iacolyte.modern-csharp": "https://github.com/iacolyte/unity-modern-csharp.git#v0.1.0"
+"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0"
 ```
 
 Requires Unity 6000.0 or newer.
