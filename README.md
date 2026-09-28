@@ -2,8 +2,8 @@
 
 The `com.iacolyte.modern-csharp` Unity package enables C# 10–12 and nullable reference types in Unity 6:
 
-- it adds the `ModernCSharp.Polyfills` assembly with polyfills for compiler-required types that `netstandard2.1` lacks;
-- it adds a Project Settings page that creates and updates `csc.rsp` next to every `.asmdef` in `Assets`.
+- it adds a Project Settings page that creates and updates `csc.rsp` next to every `.asmdef` in `Assets`;
+- it adds a source generator, connected through the same `csc.rsp`, that emits polyfills for compiler-required types that `netstandard2.1` lacks.
 
 ## Installation
 
@@ -25,14 +25,18 @@ Requires Unity 6000.0 or newer.
 
 ```
 package.json
-Runtime/
-├── ModernCSharp.Polyfills.asmdef   # public polyfills, autoReferenced
-└── *.cs
 Editor/
 ├── ModernCSharp.Editor.asmdef
 ├── ModernCSharpSettingsProvider.cs # Project Settings → C# Language
 ├── ModernCSharpApplier.cs          # writes csc.rsp files
 └── AsmdefWatcher.cs                # auto-updates when an asmdef is added
+Generators~/
+└── ModernCSharp.Generators.dll     # polyfill source generator, hidden from Unity
+Source~/                            # generator sources, hidden from Unity
+├── ModernCSharp.Generators.csproj
+├── PolyfillGenerator.cs
+├── Polyfills.cs
+└── build.sh                        # builds the DLL into Generators~/
 ```
 
 ## Settings
@@ -52,24 +56,28 @@ The collapsible **Assemblies** section shows which asmdefs are currently process
 
 How the tool handles `csc.rsp`:
 
-- only the `-langversion` and `-nullable` lines are changed; all other options (`-warnaserror`, `-define`, etc.) stay as they are;
+- only the `-langversion`, `-nullable` and polyfills generator lines are changed; all other options, including other analyzers (`-warnaserror`, `-define`, etc.) stay as they are;
 - a file is rewritten only when its content actually changes, so there are no unnecessary recompilations;
 - files next to asmdefs that fall out of the filter are neither deleted nor changed;
 - asmdefs in `Packages/` are never touched; the package's own assemblies ship with their own `csc.rsp`.
 
 After changing the language version, run **Edit → Preferences → External Tools → Regenerate project files** so your IDE picks up the new version.
 
-## Referencing the polyfills
+## Polyfills generator
 
-`Assembly-CSharp` and `Assembly-CSharp-Editor` see `ModernCSharp.Polyfills` automatically. Your own asmdefs need the reference added manually: in the asmdef inspector, add `ModernCSharp.Polyfills` under **Assembly Definition References**, or add it to the JSON:
+The polyfills are produced by a Roslyn source generator. The tool adds it to every managed `csc.rsp`:
 
-```json
-"references": [
-    "ModernCSharp.Polyfills"
-]
+```
+-a:Library/PackageCache/com.iacolyte.modern-csharp@<hash>/Generators~/ModernCSharp.Generators.dll
 ```
 
-Without this reference, `record`, `init`, `required` and the other features from the [Polyfills](#polyfills) table won't compile in that assembly.
+- Every assembly gets its own `internal` copies of the types from the [Polyfills](#polyfills) table, so asmdefs need no extra references.
+- A type is skipped when the assembly can already see one: from the BCL, from a third-party DLL, or from another assembly through `InternalsVisibleTo`. This prevents CS0433 and CS0436 conflicts.
+- Unity doesn't import folders whose names end with `~`, so the DLL doesn't appear in the Project window and isn't treated as a plugin.
+- Rider and Visual Studio read `-a:` from `csc.rsp` and run the generator too, so the IDE sees the generated types. They appear under **Dependencies → Analyzers**, not as files on disk.
+- The package path changes with every package update. The tool rewrites it on editor load; the package's own Editor assembly doesn't use the generator, so it compiles even with a stale path.
+
+To change the generator, edit `Source~/` and run `Source~/build.sh`. It needs the .NET SDK and builds against `Microsoft.CodeAnalysis.CSharp` 4.8: the generator must not reference a newer Roslyn than Unity's compiler (4.10 in Unity 6000.6).
 
 ## C# 10–12 in Unity
 
@@ -805,26 +813,25 @@ public static void Log_Intercepted(string msg) { }
 
 ## Polyfills
 
-They live in [`Runtime/`](Runtime/) and are declared `public` in the `ModernCSharp.Polyfills` assembly, so a single copy serves every assembly in the project.
+The generator emits them as `internal` types; the sources are in [`Source~/Polyfills.cs`](Source~/Polyfills.cs).
 
-| File | Namespace | Used for |
+| Type | Namespace | Used for |
 |---|---|---|
-| `IsExternalInit.cs` | `System.Runtime.CompilerServices` | `record`, `init`, `readonly record struct` |
-| `CallerArgumentExpressionAttribute.cs` | `System.Runtime.CompilerServices` | Argument text in check messages |
-| `InterpolatedStringHandlerAttribute.cs` | `System.Runtime.CompilerServices` | Custom `$"..."` handlers |
-| `InterpolatedStringHandlerArgumentAttribute.cs` | `System.Runtime.CompilerServices` | Passing method arguments to a handler |
-| `RequiredMemberAttribute.cs` | `System.Runtime.CompilerServices` | `required` members |
-| `CompilerFeatureRequiredAttribute.cs` | `System.Runtime.CompilerServices` | `required` members |
-| `SetsRequiredMembersAttribute.cs` | `System.Diagnostics.CodeAnalysis` | A constructor that sets `required` members itself |
-| `UnscopedRefAttribute.cs` | `System.Diagnostics.CodeAnalysis` | Returning a reference to a struct field |
-| `CollectionBuilderAttribute.cs` | `System.Runtime.CompilerServices` | Collection expressions for custom collections |
-| `ExperimentalAttribute.cs` | `System.Diagnostics.CodeAnalysis` | `[Experimental]` |
+| `IsExternalInit` | `System.Runtime.CompilerServices` | `record`, `init`, `readonly record struct` |
+| `CallerArgumentExpressionAttribute` | `System.Runtime.CompilerServices` | Argument text in check messages |
+| `InterpolatedStringHandlerAttribute` | `System.Runtime.CompilerServices` | Custom `$"..."` handlers |
+| `InterpolatedStringHandlerArgumentAttribute` | `System.Runtime.CompilerServices` | Passing method arguments to a handler |
+| `RequiredMemberAttribute` | `System.Runtime.CompilerServices` | `required` members |
+| `CompilerFeatureRequiredAttribute` | `System.Runtime.CompilerServices` | `required` members |
+| `SetsRequiredMembersAttribute` | `System.Diagnostics.CodeAnalysis` | A constructor that sets `required` members itself |
+| `UnscopedRefAttribute` | `System.Diagnostics.CodeAnalysis` | Returning a reference to a struct field |
+| `CollectionBuilderAttribute` | `System.Runtime.CompilerServices` | Collection expressions for custom collections |
+| `ExperimentalAttribute` | `System.Diagnostics.CodeAnalysis` | `[Experimental]` |
 
 Rules:
 
 - **Don't change the namespaces.** The compiler looks these types up by their full name.
-- **Don't keep your own copies.** If an assembly that references the package still has its own polyfills with the same names, the compiler reports warning CS0436 and uses the local copy. Remove old copies.
-- **Third-party DLLs.** If some DLL in the project also declares these types as `public`, assemblies that see both copies may get type conflicts (CS0433). Internal copies, like the one in Unity Test Framework, don't interfere.
+- **Existing copies are respected.** If an assembly can already see a type (its own file, a `public` type in a third-party DLL, an `InternalsVisibleTo` copy), the generator doesn't emit it. Internal copies in other assemblies, like the one in Unity Test Framework, don't interfere.
 
 Polyfills can't enable features that need runtime support, which Mono and IL2CPP lack:
 
@@ -834,7 +841,7 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 
 ## Unity gotchas
 
-- **Polyfill reference.** Every asmdef of yours that needs `record` or `required` must reference `ModernCSharp.Polyfills`.
+- **Asmdefs outside the filter.** Assemblies skipped by the path filter don't get the generator, so `record` and `required` won't compile there unless they have their own polyfills.
 - **Serialization.** The inspector and `JsonUtility` work only with fields. They don't see `init` properties, record parameters or primary constructors. Keep persisted data in regular fields with `[SerializeField]`.
 - **Fake null.** A destroyed Unity object equals `null` only through Unity's own `==` operator. `?.`, `??`, `is null` and patterns ignore this, and so does nullable analysis.
 - **Nullable and serialized fields.** Declare inspector-assigned fields with `= null!`, and optional ones as `T?`.

@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace ModernCSharp.Editor;
 
-// Shared by the settings window and the Project Settings page.
+// Draws the Project Settings page.
 internal static class ModernCSharpSettingsGUI {
     static class Content {
         public static readonly GUIContent LanguageVersion = new("Language Version", "Written as -langversion to every managed csc.rsp.");

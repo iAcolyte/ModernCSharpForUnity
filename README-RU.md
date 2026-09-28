@@ -2,8 +2,8 @@
 
 Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–12 и nullable в Unity 6:
 
-- добавляет сборку `ModernCSharp.Polyfills` с заглушками служебных типов, которых нет в `netstandard2.1`;
-- добавляет страницу в Project Settings, которая создаёт и обновляет `csc.rsp` рядом с каждым `.asmdef` в `Assets`.
+- добавляет страницу в Project Settings, которая создаёт и обновляет `csc.rsp` рядом с каждым `.asmdef` в `Assets`;
+- подключает через тот же `csc.rsp` source generator, который создаёт заглушки служебных типов, которых нет в `netstandard2.1`.
 
 ## Установка
 
@@ -25,14 +25,18 @@ https://github.com/iacolyte/unity-modern-csharp.git
 
 ```
 package.json
-Runtime/
-├── ModernCSharp.Polyfills.asmdef   # публичные заглушки, autoReferenced
-└── *.cs
 Editor/
 ├── ModernCSharp.Editor.asmdef
 ├── ModernCSharpSettingsProvider.cs # Project Settings → C# Language
 ├── ModernCSharpApplier.cs          # запись csc.rsp
 └── AsmdefWatcher.cs                # автообновление при добавлении asmdef
+Generators~/
+└── ModernCSharp.Generators.dll     # генератор заглушек, Unity его не видит
+Source~/                            # исходники генератора, Unity их не видит
+├── ModernCSharp.Generators.csproj
+├── PolyfillGenerator.cs
+├── Polyfills.cs
+└── build.sh                        # собирает DLL в Generators~/
 ```
 
 ## Настройки
@@ -52,24 +56,28 @@ Editor/
 
 Как утилита работает с `csc.rsp`:
 
-- в файле меняются только строки `-langversion` и `-nullable`, остальные опции (`-warnaserror`, `-define` и т. д.) остаются как были;
+- в файле меняются только строки `-langversion`, `-nullable` и генератора заглушек, остальные опции, включая другие анализаторы (`-warnaserror`, `-define` и т. д.) остаются как были;
 - файл перезаписывается, только если содержимое действительно изменилось, поэтому лишних перекомпиляций нет;
 - файлы у asmdef, которые выпали из фильтра, не удаляются и не меняются;
 - asmdef из `Packages/` не трогаются, у сборок самого пакета свой `csc.rsp`.
 
 После смены версии языка выполни **Edit → Preferences → External Tools → Regenerate project files**, чтобы IDE увидела новую версию.
 
-## Подключение заглушек
+## Генератор заглушек
 
-`Assembly-CSharp` и `Assembly-CSharp-Editor` видят `ModernCSharp.Polyfills` автоматически. Своему asmdef ссылку нужно добавить вручную: в инспекторе asmdef в **Assembly Definition References** добавь `ModernCSharp.Polyfills`, или пропиши её в JSON:
+Заглушки создаёт source generator для Roslyn. Утилита добавляет его в каждый управляемый `csc.rsp`:
 
-```json
-"references": [
-    "ModernCSharp.Polyfills"
-]
+```
+-a:Library/PackageCache/com.iacolyte.modern-csharp@<hash>/Generators~/ModernCSharp.Generators.dll
 ```
 
-Без этой ссылки в сборке не будут работать `record`, `init`, `required` и остальные фичи из таблицы [Заглушки](#заглушки).
+- Каждая сборка получает свои `internal`-копии типов из таблицы [Заглушки](#заглушки), поэтому в asmdef ничего добавлять не нужно.
+- Тип пропускается, если сборка уже его видит: из BCL, из сторонней DLL или из другой сборки через `InternalsVisibleTo`. Поэтому конфликтов CS0433 и CS0436 нет.
+- Папки с `~` в конце имени Unity не импортирует, поэтому DLL не видна в окне Project и не считается плагином.
+- Rider и Visual Studio читают `-a:` из `csc.rsp` и тоже запускают генератор, так что IDE видит сгенерированные типы. Они показываются в **Dependencies → Analyzers**, файлов на диске нет.
+- Путь к пакету меняется при каждом обновлении. Утилита переписывает его при запуске редактора. Editor-сборка самого пакета генератор не использует, поэтому она компилируется даже со старым путём.
+
+Чтобы изменить генератор, правь `Source~/` и запускай `Source~/build.sh`. Нужен .NET SDK, сборка идёт с `Microsoft.CodeAnalysis.CSharp` 4.8: генератор не должен ссылаться на Roslyn новее, чем у компилятора Unity (4.10 в Unity 6000.6).
 
 ## C# 10–12 в Unity
 
@@ -805,26 +813,25 @@ public static void Log_Intercepted(string msg) { }
 
 ## Заглушки
 
-Лежат в [`Runtime/`](Runtime/) и объявлены как `public` в сборке `ModernCSharp.Polyfills`, поэтому одна копия обслуживает все сборки проекта.
+Генератор создаёт их как `internal`-типы, исходники лежат в [`Source~/Polyfills.cs`](Source~/Polyfills.cs).
 
-| Файл | Пространство имён | Для чего |
+| Тип | Пространство имён | Для чего |
 |---|---|---|
-| `IsExternalInit.cs` | `System.Runtime.CompilerServices` | `record`, `init`, `readonly record struct` |
-| `CallerArgumentExpressionAttribute.cs` | `System.Runtime.CompilerServices` | Текст аргумента в сообщениях проверок |
-| `InterpolatedStringHandlerAttribute.cs` | `System.Runtime.CompilerServices` | Свои обработчики `$"..."` |
-| `InterpolatedStringHandlerArgumentAttribute.cs` | `System.Runtime.CompilerServices` | Передача аргументов метода в обработчик |
-| `RequiredMemberAttribute.cs` | `System.Runtime.CompilerServices` | `required`-члены |
-| `CompilerFeatureRequiredAttribute.cs` | `System.Runtime.CompilerServices` | `required`-члены |
-| `SetsRequiredMembersAttribute.cs` | `System.Diagnostics.CodeAnalysis` | Конструктор, который сам заполняет `required` |
-| `UnscopedRefAttribute.cs` | `System.Diagnostics.CodeAnalysis` | Возврат ссылки на поле структуры |
-| `CollectionBuilderAttribute.cs` | `System.Runtime.CompilerServices` | Collection expressions для своих коллекций |
-| `ExperimentalAttribute.cs` | `System.Diagnostics.CodeAnalysis` | `[Experimental]` |
+| `IsExternalInit` | `System.Runtime.CompilerServices` | `record`, `init`, `readonly record struct` |
+| `CallerArgumentExpressionAttribute` | `System.Runtime.CompilerServices` | Текст аргумента в сообщениях проверок |
+| `InterpolatedStringHandlerAttribute` | `System.Runtime.CompilerServices` | Свои обработчики `$"..."` |
+| `InterpolatedStringHandlerArgumentAttribute` | `System.Runtime.CompilerServices` | Передача аргументов метода в обработчик |
+| `RequiredMemberAttribute` | `System.Runtime.CompilerServices` | `required`-члены |
+| `CompilerFeatureRequiredAttribute` | `System.Runtime.CompilerServices` | `required`-члены |
+| `SetsRequiredMembersAttribute` | `System.Diagnostics.CodeAnalysis` | Конструктор, который сам заполняет `required` |
+| `UnscopedRefAttribute` | `System.Diagnostics.CodeAnalysis` | Возврат ссылки на поле структуры |
+| `CollectionBuilderAttribute` | `System.Runtime.CompilerServices` | Collection expressions для своих коллекций |
+| `ExperimentalAttribute` | `System.Diagnostics.CodeAnalysis` | `[Experimental]` |
 
 Правила:
 
 - **Не менять пространства имён.** Компилятор ищет эти типы по полному имени.
-- **Не держать свои копии.** Если в сборке, которая ссылается на пакет, остались свои заглушки с теми же именами, компилятор выдаст предупреждение CS0436 и возьмёт локальную копию. Старые копии лучше удалить.
-- **Сторонние DLL.** Если какая-то DLL в проекте тоже объявляет эти типы как `public`, в сборках, которые видят обе копии, возможны конфликты типов (CS0433). Internal-копии, как в Unity Test Framework, не мешают.
+- **Существующие копии учитываются.** Если сборка уже видит тип (свой файл, `public`-тип в сторонней DLL, копию через `InternalsVisibleTo`), генератор его не создаёт. Internal-копии в других сборках, как в Unity Test Framework, не мешают.
 
 Заглушками нельзя включить фичи, которым нужна поддержка среды выполнения. Её нет в Mono и IL2CPP:
 
@@ -834,7 +841,7 @@ public static void Log_Intercepted(string msg) { }
 
 ## Что помнить в Unity
 
-- **Ссылка на заглушки.** Каждому своему asmdef, где нужны `record` или `required`, нужна ссылка на `ModernCSharp.Polyfills`.
+- **asmdef вне фильтра.** Сборки, которые пропускает фильтр путей, генератор не получают, и `record` с `required` там не соберутся без своих заглушек.
 - **Сериализация.** Инспектор и `JsonUtility` работают только с полями. Свойства `init`, параметры record и primary constructors они не видят. Сохраняемые данные держи в обычных полях с `[SerializeField]`.
 - **Фальшивый null.** Уничтоженный объект Unity равен `null` только через оператор `==` самой Unity. `?.`, `??`, `is null` и шаблоны это не учитывают, nullable-анализ тоже.
 - **Nullable и сериализуемые поля.** Поле, которое заполняет инспектор, объявляй с `= null!`, а необязательное как `T?`.
