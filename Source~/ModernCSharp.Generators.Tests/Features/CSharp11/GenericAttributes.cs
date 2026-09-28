@@ -1,5 +1,5 @@
 // Feature: Generic attributes
-// Status: Caveats
+// Status: Works
 
 using System;
 

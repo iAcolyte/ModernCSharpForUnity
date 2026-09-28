@@ -1,3 +1,5 @@
+[![Tests](https://github.com/iAcolyte/ModernCSharpForUnity/actions/workflows/tests.yml/badge.svg)](https://github.com/iAcolyte/ModernCSharpForUnity/actions/workflows/tests.yml)
+
 # Modern C# for Unity
 
 Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–12 и nullable в Unity 6:
@@ -106,9 +108,9 @@ Source~/                            # Unity её не видит
 
 | Статус | Фич |
 |---|---|
-| ✅ Работает | 29 |
+| ✅ Работает | 30 |
 | 🧩 Нужна заглушка | 5 |
-| ⚠️ С оговорками | 2 |
+| ⚠️ С оговорками | 1 |
 | ❌ Не работает | 5 |
 
 ### C# 10
@@ -635,11 +637,11 @@ public struct Particle
 
 #### Generic-атрибуты
 
-**⚠️ С оговорками**
+**✅ Работает**
 
 **Где:** атрибут, которому нужен тип, без `typeof`.
 
-> Компилируется, но рефлексия по таким атрибутам в Mono и IL2CPP ненадёжна. В Unity лучше оставить `[Attr(typeof(T))]`.
+> Чтение через рефлексию (`GetCustomAttributes(typeof(Attr<T>))`) работает и в Mono, и в IL2CPP. Проверено рантайм-тестами на Unity 6000.6.3f1.
 
 ```csharp
 public sealed class RequiresService<T> : Attribute { }
@@ -872,7 +874,7 @@ public static void Log_Intercepted(string msg) { }
 
 ---
 
-Статусы проверены компиляцией Roslyn 4.10 из Unity 6000.6.3f1 под `netstandard2.1`. Поведение во время выполнения в Mono и IL2CPP отдельно не проверялось.
+Статусы проверены компиляцией Roslyn 4.10 из Unity 6000.6.3f1 под `netstandard2.1`. Поведение во время выполнения для record, `required`, атрибутов-заглушек, своих обработчиков интерполированных строк, collection expressions, generic-атрибутов и конструкторов struct без параметров проверено в Mono (редактор) и IL2CPP (плеер macOS).
 
 ## Тесты
 

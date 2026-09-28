@@ -1,3 +1,5 @@
+[![Tests](https://github.com/iAcolyte/ModernCSharpForUnity/actions/workflows/tests.yml/badge.svg)](https://github.com/iAcolyte/ModernCSharpForUnity/actions/workflows/tests.yml)
+
 # Modern C# for Unity
 
 The `com.iacolyte.modern-csharp` Unity package enables C# 10–12 and nullable reference types in Unity 6:
@@ -106,9 +108,9 @@ Everything added to the language after C# 9, marked with whether it works in Uni
 
 | Status | Features |
 |---|---|
-| ✅ Works | 29 |
+| ✅ Works | 30 |
 | 🧩 Needs a polyfill | 5 |
-| ⚠️ With caveats | 2 |
+| ⚠️ With caveats | 1 |
 | ❌ Doesn't work | 5 |
 
 ### C# 10
@@ -635,11 +637,11 @@ public struct Particle
 
 #### Generic attributes
 
-**⚠️ With caveats**
+**✅ Works**
 
 **Where:** an attribute that needs a type, without `typeof`.
 
-> Compiles, but reflection over such attributes is unreliable in Mono and IL2CPP. In Unity, prefer `[Attr(typeof(T))]`.
+> Reading them through reflection (`GetCustomAttributes(typeof(Attr<T>))`) works in both Mono and IL2CPP; verified by the runtime tests on Unity 6000.6.3f1.
 
 ```csharp
 public sealed class RequiresService<T> : Attribute { }
@@ -872,7 +874,7 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 
 ---
 
-Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. Runtime behavior in Mono and IL2CPP was not tested separately.
+Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. Runtime behavior of records, `required`, polyfilled attributes, custom interpolated string handlers, collection expressions, generic attributes and parameterless struct constructors was verified in Mono (editor) and IL2CPP (macOS player).
 
 ## Tests
 
