@@ -56,12 +56,32 @@ The collapsible **Assemblies** section shows which asmdefs are currently process
 
 How the tool handles `csc.rsp`:
 
-- only the `-langversion`, `-nullable` and polyfills generator lines are changed; all other options, including other analyzers (`-warnaserror`, `-define`, etc.) stay as they are;
+- only the `-langversion`, `-nullable`, `MODERN_CSHARP_*` [define symbols](#define-symbols) and polyfills generator lines are changed; all other options, including other analyzers and your own defines (`-warnaserror`, `-define`, etc.) stay as they are;
 - a file is rewritten only when its content actually changes, so there are no unnecessary recompilations;
 - files next to asmdefs that fall out of the filter are neither deleted nor changed;
 - asmdefs in `Packages/` are never touched; the package's own assemblies ship with their own `csc.rsp`.
 
-After changing the language version, run **Edit → Preferences → External Tools → Regenerate project files** so your IDE picks up the new version.
+After changing the language version, run **Edit → Preferences → External Tools → Regenerate project files** so your IDE picks up the new version and define symbols.
+
+## Define symbols
+
+Every managed `csc.rsp` also gets a `-define:` line, so code can check the selected settings:
+
+| Symbol | When it is defined |
+|---|---|
+| `MODERN_CSHARP_9_OR_NEWER` | Always. Marks an assembly managed by the package. |
+| `MODERN_CSHARP_10_OR_NEWER` … `MODERN_CSHARP_12_OR_NEWER` | Language Version is at least that version. |
+| `MODERN_CSHARP_NULLABLE` | Nullable is on. |
+
+```csharp
+#if MODERN_CSHARP_12_OR_NEWER
+    int[] items = [1, 2, 3];
+#else
+    int[] items = { 1, 2, 3 };
+#endif
+```
+
+The symbols exist only in managed assemblies: `Assets/csc.rsp` and asmdefs that pass the path filter. Assemblies skipped by the filter and code in other packages don't see them. Your own `-define` symbols in the same file are kept.
 
 ## Polyfills generator
 

@@ -5,15 +5,18 @@ using System.Linq;
 
 namespace ModernCSharp.Editor;
 
-// Updates only -langversion, -nullable and the polyfill generator in a csc.rsp and keeps every other option as is.
+// Updates only -langversion, -nullable, the MODERN_CSHARP_* defines and the polyfill generator in a csc.rsp
+// and keeps every other option as is.
 internal static class RspFile {
     const string LangVersionOption = "langversion";
     const string NullableOption = "nullable";
+    static readonly char[] DefineSeparators = { ';', ',' };
     public const string GeneratorFileName = "ModernCSharp.Generators.dll";
 
     // Returns true when the file was created or changed.
     // A null generatorPath removes the generator; other analyzers are kept.
-    public static bool Write(string path, LanguageVersion version, bool nullable, string? generatorPath) {
+    public static bool Write(
+        string path, LanguageVersion version, bool nullable, IReadOnlyCollection<string> defines, string? generatorPath) {
         var existing = File.Exists(path) ? File.ReadAllText(path) : null;
         var lines = existing == null
             ? new List<string>()
@@ -25,6 +28,12 @@ internal static class RspFile {
 
         Upsert(lines, LangVersionOption, $"-langversion:{(int)version}");
         Upsert(lines, NullableOption, nullable ? "-nullable:enable" : "-nullable:disable");
+
+        RemoveOwnDefines(lines);
+        if (defines.Count > 0) {
+            var nullableIndex = lines.FindIndex(line => IsOption(line, NullableOption));
+            lines.Insert(nullableIndex + 1, "-define:" + string.Join(";", defines));
+        }
 
         // Also drops a stale path, e.g. from an older Library/PackageCache/...@hash folder.
         lines.RemoveAll(IsGenerator);
@@ -53,6 +62,35 @@ internal static class RspFile {
         for (var i = lines.Count - 1; i > index; i--) {
             if (IsOption(lines[i], option)) {
                 lines.RemoveAt(i);
+            }
+        }
+    }
+
+    // Strips MODERN_CSHARP_* symbols from every -define line; other symbols stay where they were.
+    static void RemoveOwnDefines(List<string> lines) {
+        for (var i = lines.Count - 1; i >= 0; i--) {
+            if (!IsOption(lines[i], "define") && !IsOption(lines[i], "d")) {
+                continue;
+            }
+
+            var trimmed = lines[i].Trim();
+            var colon = trimmed.IndexOf(':');
+            if (colon < 0) {
+                continue;
+            }
+
+            var symbols = trimmed.Substring(colon + 1).Split(DefineSeparators, StringSplitOptions.RemoveEmptyEntries)
+                .Select(symbol => symbol.Trim())
+                .ToList();
+            var kept = symbols.Where(symbol => !symbol.StartsWith(DefineSymbols.Prefix, StringComparison.Ordinal)).ToList();
+            if (kept.Count == symbols.Count) {
+                continue;
+            }
+
+            if (kept.Count == 0) {
+                lines.RemoveAt(i);
+            } else {
+                lines[i] = trimmed.Substring(0, colon + 1) + string.Join(";", kept);
             }
         }
     }
