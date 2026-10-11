@@ -1,5 +1,10 @@
 # Changelog
 
+## [0.2.1] - 2026-10-11
+
+### Fixed
+- Settings were reset to defaults on every editor load: Unity didn't link `ModernCSharpSettings` to its script because of the file-scoped namespace, so the saved `ProjectSettings/ModernCSharpSettings.asset` was never loaded back. A file saved by an earlier version is repaired on load and its values start to apply.
+
 ## [0.2.0] - 2026-10-11
 
 ### Added

@@ -15,10 +15,10 @@ Open **Window → Package Manager → + → Add package from git URL** and enter
 https://github.com/iAcolyte/ModernCSharpForUnity.git
 ```
 
-To pin a specific version, add a tag: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0`. You can also add it to `Packages/manifest.json`:
+To pin a specific version, add a tag: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.1`. You can also add it to `Packages/manifest.json`:
 
 ```json
-"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0"
+"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.1"
 ```
 
 Requires Unity 6000.0 or newer. The highest language version depends on the compiler the editor ships with:

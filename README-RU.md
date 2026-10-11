@@ -15,10 +15,10 @@ Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–14 
 https://github.com/iAcolyte/ModernCSharpForUnity.git
 ```
 
-Конкретная версия подключается по тегу: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0`. То же самое можно прописать в `Packages/manifest.json`:
+Конкретная версия подключается по тегу: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.1`. То же самое можно прописать в `Packages/manifest.json`:
 
 ```json
-"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0"
+"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.1"
 ```
 
 Требуется Unity 6000.0 или новее. Старшая доступная версия языка зависит от компилятора в редакторе:

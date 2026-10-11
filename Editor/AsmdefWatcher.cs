@@ -8,6 +8,8 @@ namespace ModernCSharp.Editor;
 [InitializeOnLoad]
 internal sealed class AsmdefWatcher: AssetPostprocessor {
     static AsmdefWatcher() {
+        ModernCSharpSettings.RepairSavedFile();
+
         // Covers a fresh install: rsp files appear right after the package compiles.
         EditorApplication.delayCall += () => {
             if (ModernCSharpSettings.instance.AutoApply) {
