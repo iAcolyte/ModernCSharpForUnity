@@ -102,12 +102,12 @@ public sealed class GeneratorTests {
         Assert.That(result.Diagnostics, Is.Empty, result.Format());
     }
 
-    // Unity 6000.6 compiles with Roslyn 4.10 and can't load a generator built against a newer one.
+    // Unity 6000.0–6000.4 compiles with Roslyn 4.3 and can't load a generator built against a newer one.
     [Test]
     public void ReferencesRoslynNoNewerThanUnity() {
         var roslyn = typeof(PolyfillGenerator).Assembly.GetReferencedAssemblies()
             .Single(name => name.Name == "Microsoft.CodeAnalysis");
 
-        Assert.That(roslyn.Version, Is.LessThanOrEqualTo(new Version(4, 10)));
+        Assert.That(roslyn.Version, Is.LessThanOrEqualTo(new Version(4, 3, 0, 0)));
     }
 }

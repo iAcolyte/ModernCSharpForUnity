@@ -37,7 +37,15 @@ internal static class ModernCSharpSettingsGUI {
         var settings = ModernCSharpSettings.instance;
 
         EditorGUI.BeginChangeCheck();
-        var version = (LanguageVersion)EditorGUILayout.EnumPopup(Content.LanguageVersion, settings.LanguageVersion);
+        var version = (LanguageVersion)EditorGUILayout.EnumPopup(
+            Content.LanguageVersion, settings.LanguageVersion, value => LanguageVersions.IsSupported((LanguageVersion)value), false);
+        if (!LanguageVersions.IsSupported(settings.LanguageVersion)) {
+            EditorGUILayout.HelpBox(
+                $"C# {(int)settings.LanguageVersion} is set, but the compiler of this editor supports up to C# {(int)LanguageVersions.Max}. " +
+                $"csc.rsp files are written with C# {(int)settings.EffectiveLanguageVersion}.",
+                MessageType.Warning);
+        }
+
         var nullable = EditorGUILayout.Toggle(Content.Nullable, settings.Nullable);
         var manageRootRsp = EditorGUILayout.Toggle(Content.ManageRootRsp, settings.ManageRootRsp);
         var autoApply = EditorGUILayout.Toggle(Content.AutoApply, settings.AutoApply);

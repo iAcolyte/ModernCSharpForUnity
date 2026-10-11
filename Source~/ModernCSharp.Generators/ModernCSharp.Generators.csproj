@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!-- Unity 6 compiles with Roslyn 4.10: Microsoft.CodeAnalysis must not be newer. -->
+  <!-- Unity 6000.0–6000.4 compiles with Roslyn 4.3.1: Microsoft.CodeAnalysis must not be newer. -->
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <LangVersion>latest</LangVersion>
@@ -13,7 +13,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.8.0" PrivateAssets="all" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.3.0" PrivateAssets="all" />
   </ItemGroup>
 
 </Project>

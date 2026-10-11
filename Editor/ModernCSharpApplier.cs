@@ -85,10 +85,11 @@ public static class ModernCSharpApplier {
         }
 
         var generatorPath = GetGeneratorPath();
-        var defines = DefineSymbols.For(settings.LanguageVersion, settings.Nullable);
+        var version = settings.EffectiveLanguageVersion;
+        var defines = DefineSymbols.For(version, settings.Nullable);
         var changed = targets
             .Distinct(StringComparer.OrdinalIgnoreCase)
-            .Where(path => RspFile.Write(path, settings.LanguageVersion, settings.Nullable, defines, generatorPath))
+            .Where(path => RspFile.Write(path, version, settings.Nullable, defines, generatorPath))
             .ToList();
 
         if (changed.Count == 0) {

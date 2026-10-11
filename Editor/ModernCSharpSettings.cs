@@ -13,6 +13,20 @@ public enum LanguageVersion {
     [InspectorName("C# 12")] CSharp12 = 12,
 }
 
+// The range the editor's compiler accepts in -langversion: Roslyn 4.3 up to Unity 6000.4, Roslyn 4.10 since 6000.5.
+public static class LanguageVersions {
+    public const LanguageVersion Min = LanguageVersion.CSharp9;
+#if UNITY_6000_5_OR_NEWER
+    public const LanguageVersion Max = LanguageVersion.CSharp12;
+#else
+    public const LanguageVersion Max = LanguageVersion.CSharp10;
+#endif
+
+    public static bool IsSupported(LanguageVersion version) => version >= Min && version <= Max;
+
+    public static LanguageVersion Clamp(LanguageVersion version) => version < Min ? Min : version > Max ? Max : version;
+}
+
 public enum PathFilterMode {
     // Every asmdef under Assets except the listed folders.
     Blacklist,
@@ -23,7 +37,7 @@ public enum PathFilterMode {
 // Stored in ProjectSettings/ so the whole team shares the same compiler options.
 [FilePath("ProjectSettings/ModernCSharpSettings.asset", FilePathAttribute.Location.ProjectFolder)]
 public sealed class ModernCSharpSettings: ScriptableSingleton<ModernCSharpSettings> {
-    [SerializeField] LanguageVersion languageVersion = LanguageVersion.CSharp12;
+    [SerializeField] LanguageVersion languageVersion = LanguageVersions.Min;
     [SerializeField] bool nullable = true;
     [SerializeField] bool manageRootRsp = true;
     [SerializeField] bool autoApply = true;
@@ -34,6 +48,9 @@ public sealed class ModernCSharpSettings: ScriptableSingleton<ModernCSharpSettin
         get => languageVersion;
         set => languageVersion = value;
     }
+
+    // What goes to csc.rsp. The stored value stays as is: the team may open the project in a newer editor.
+    public LanguageVersion EffectiveLanguageVersion => LanguageVersions.Clamp(languageVersion);
 
     public bool Nullable {
         get => nullable;

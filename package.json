@@ -1,8 +1,8 @@
 {
   "name": "com.iacolyte.modern-csharp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "displayName": "Modern C# for Unity",
-  "description": "Enables C# 10–12 in Unity: a Project Settings page that manages csc.rsp next to each assembly definition and a source generator that adds the polyfills for compiler-required types.",
+  "description": "Enables C# 10 in Unity 6000.0+ and C# 11–12 in Unity 6000.5+: a Project Settings page that manages csc.rsp next to each assembly definition and a source generator that adds the polyfills for compiler-required types.",
   "unity": "6000.0",
   "license": "MIT",
   "author": {

@@ -1,5 +1,14 @@
 # Changelog
 
+## [0.1.1] - 2026-10-11
+
+### Fixed
+- Compilation errors in Unity 6000.0–6000.4, whose Roslyn 4.3 supports C# 10 at most: the package's own assemblies now compile with `-langversion:10`, and the polyfills generator is built against `Microsoft.CodeAnalysis.CSharp` 4.3 instead of 4.8, which the older compiler could not load.
+
+### Changed
+- Language Version defaults to C# 9 instead of C# 12.
+- C# 11 and 12 can be selected only in Unity 6000.5 or newer. A higher stored version is kept, but `csc.rsp` files and `MODERN_CSHARP_*_OR_NEWER` symbols are written for the highest version the editor supports.
+
 ## [0.1.0] - 2026-09-28
 
 ### Added

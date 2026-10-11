@@ -21,7 +21,12 @@ To pin a specific version, add a tag: `https://github.com/iAcolyte/ModernCSharpF
 "com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0"
 ```
 
-Requires Unity 6000.0 or newer.
+Requires Unity 6000.0 or newer. The highest language version depends on the compiler the editor ships with:
+
+| Unity | Roslyn | Language versions |
+|---|---|---|
+| 6000.0 – 6000.4 | 4.3 | C# 9, 10 |
+| 6000.5 and newer | 4.10 | C# 9, 10, 11, 12 |
 
 ## Contents
 
@@ -48,12 +53,14 @@ Open them from **Edit → Project Settings → C# Language**. They are stored in
 
 | Field | What it does |
 |---|---|
-| Language Version | C# 9, 10, 11 or 12. Written to `csc.rsp` as `-langversion`. |
+| Language Version | C# 9 by default. Written to `csc.rsp` as `-langversion`. Versions the editor's compiler doesn't support are disabled, see [Installation](#installation). |
 | Nullable | On: `-nullable:enable`, off: `-nullable:disable`. |
 | Manage Assets/csc.rsp | Whether to manage the root `Assets/csc.rsp`, which configures `Assembly-CSharp` and `Assembly-CSharp-Editor`. |
 | Auto Apply | Update the files on editor load, when a new asmdef appears and whenever the settings change. When off, changes are applied only by the **Apply to All Assemblies** button. |
 | Path Filter | **Blacklist**: manage every asmdef in `Assets` except those in the listed folders. **Whitelist**: manage only asmdefs in the listed folders. |
 | Folders | Folders for the filter, e.g. `Assets/Plugins`. Subfolders are included too. |
+
+If the stored version is higher than the editor supports, e.g. a project set to C# 12 is opened in Unity 6000.3, the setting is kept, a warning is shown, and `csc.rsp` files and [define symbols](#define-symbols) are written for the highest supported version.
 
 The collapsible **Assemblies** section shows which asmdefs are currently processed (`managed`) and which are skipped (`skipped`).
 
@@ -100,7 +107,7 @@ The polyfills are produced by a Roslyn source generator. The tool adds it to eve
 - Rider and Visual Studio read `-a:` from `csc.rsp` and run the generator too, so the IDE sees the generated types. They appear under **Dependencies → Analyzers**, not as files on disk.
 - The package path changes with every package update. The tool rewrites it on editor load; the package's own Editor assembly doesn't use the generator, so it compiles even with a stale path.
 
-To change the generator, edit `Source~/` and run `Source~/build.sh`. It needs the .NET SDK and builds against `Microsoft.CodeAnalysis.CSharp` 4.8: the generator must not reference a newer Roslyn than Unity's compiler (4.10 in Unity 6000.6).
+To change the generator, edit `Source~/` and run `Source~/build.sh`. It needs the .NET SDK and builds against `Microsoft.CodeAnalysis.CSharp` 4.3: the generator must not reference a newer Roslyn than Unity's compiler (4.3 in Unity 6000.0–6000.4).
 
 ## C# 10–12 in Unity
 
@@ -874,7 +881,7 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 
 ---
 
-Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. Runtime behavior of records, `required`, polyfilled attributes, custom interpolated string handlers, collection expressions, generic attributes and parameterless struct constructors was verified in Mono (editor) and IL2CPP (macOS player).
+Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. C# 11 and 12 need Unity 6000.5 or newer. Runtime behavior of records, `required`, polyfilled attributes, custom interpolated string handlers, collection expressions, generic attributes and parameterless struct constructors was verified in Mono (editor) and IL2CPP (macOS player).
 
 ## Tests
 
