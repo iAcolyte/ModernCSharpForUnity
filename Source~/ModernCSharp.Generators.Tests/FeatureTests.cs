@@ -43,6 +43,9 @@ public sealed class Feature {
 
     public int Version { get; }
 
+    // Each snippet is compiled as the version it was added in.
+    public LanguageVersion LanguageVersion => Enum.Parse<LanguageVersion>($"CSharp{Version}");
+
     public override string ToString() => $"C# {Version}: {Name}";
 
     string? Header(string key) {
@@ -51,7 +54,7 @@ public sealed class Feature {
     }
 }
 
-// Every C# 10–12 feature from the README, compiled the way Unity 6000.6 compiles it.
+// Every C# 10–14 feature from the README, compiled the way Unity 6000.7 compiles it.
 public sealed class FeatureTests {
     static readonly Dictionary<string, FeatureStatus> ReadmeStatuses = new() {
         ["✅ Works"] = FeatureStatus.Works,
@@ -65,15 +68,15 @@ public sealed class FeatureTests {
 
     [TestCaseSource(nameof(Features))]
     public void CompilesAsDocumented(Feature feature) {
-        var withGenerator = TestCompiler.Compile(feature.Source);
+        var withGenerator = TestCompiler.Compile(feature.Source, feature.LanguageVersion);
 
         switch (feature.Status) {
             case FeatureStatus.Works:
-                var withoutGenerator = TestCompiler.Compile(feature.Source, withGenerator: false);
+                var withoutGenerator = TestCompiler.Compile(feature.Source, feature.LanguageVersion, withGenerator: false);
                 Assert.That(withoutGenerator.Errors, Is.Empty, withoutGenerator.Format());
                 break;
             case FeatureStatus.Polyfill:
-                Assert.That(TestCompiler.Compile(feature.Source, withGenerator: false).Errors, Is.Not.Empty,
+                Assert.That(TestCompiler.Compile(feature.Source, feature.LanguageVersion, withGenerator: false).Errors, Is.Not.Empty,
                     "compiles without the generator, so it doesn't need a polyfill");
                 Assert.That(withGenerator.Errors, Is.Empty, withGenerator.Format());
                 break;

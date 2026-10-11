@@ -10,14 +10,17 @@ public sealed class LanguageVersionsTests {
     }
 
     [Test]
-    public void CSharp11And12NeedTheNewCompiler() {
-#if UNITY_6000_5_OR_NEWER
+    public void NewerVersionsNeedANewerCompiler() {
+#if UNITY_6000_7_OR_NEWER
+        Assert.That(LanguageVersions.Max, Is.EqualTo(LanguageVersion.CSharp14));
+#elif UNITY_6000_5_OR_NEWER
         Assert.That(LanguageVersions.Max, Is.EqualTo(LanguageVersion.CSharp12));
 #else
         Assert.That(LanguageVersions.Max, Is.EqualTo(LanguageVersion.CSharp10));
 #endif
-        Assert.That(LanguageVersions.IsSupported(LanguageVersion.CSharp11), Is.EqualTo(LanguageVersions.Max >= LanguageVersion.CSharp11));
-        Assert.That(LanguageVersions.IsSupported(LanguageVersion.CSharp12), Is.EqualTo(LanguageVersions.Max >= LanguageVersion.CSharp12));
+        for (var version = LanguageVersion.CSharp11; version <= LanguageVersion.CSharp14; version++) {
+            Assert.That(LanguageVersions.IsSupported(version), Is.EqualTo(version <= LanguageVersions.Max), version.ToString());
+        }
     }
 
     [Test]

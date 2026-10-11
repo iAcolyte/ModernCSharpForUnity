@@ -11,12 +11,17 @@ public enum LanguageVersion {
     [InspectorName("C# 10")] CSharp10 = 10,
     [InspectorName("C# 11")] CSharp11 = 11,
     [InspectorName("C# 12")] CSharp12 = 12,
+    [InspectorName("C# 13")] CSharp13 = 13,
+    [InspectorName("C# 14")] CSharp14 = 14,
 }
 
-// The range the editor's compiler accepts in -langversion: Roslyn 4.3 up to Unity 6000.4, Roslyn 4.10 since 6000.5.
+// The range the editor's compiler accepts in -langversion:
+// Roslyn 4.3 up to Unity 6000.4, Roslyn 4.10 in 6000.5–6000.6, Roslyn 5.6 since 6000.7.
 public static class LanguageVersions {
     public const LanguageVersion Min = LanguageVersion.CSharp9;
-#if UNITY_6000_5_OR_NEWER
+#if UNITY_6000_7_OR_NEWER
+    public const LanguageVersion Max = LanguageVersion.CSharp14;
+#elif UNITY_6000_5_OR_NEWER
     public const LanguageVersion Max = LanguageVersion.CSharp12;
 #else
     public const LanguageVersion Max = LanguageVersion.CSharp10;

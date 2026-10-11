@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.0] - 2026-10-11
+
+### Added
+- C# 13 and 14 in Language Version, available in Unity 6000.7 or newer (Roslyn 5.6), with the `MODERN_CSHARP_13_OR_NEWER` and `MODERN_CSHARP_14_OR_NEWER` define symbols.
+- Polyfill: `OverloadResolutionPriorityAttribute`.
+- C# 13–14 in the feature matrix: 18 features with snippets. Each snippet is now compiled as the language version it was added in, with Roslyn 5.6.
+
 ## [0.1.1] - 2026-10-11
 
 ### Fixed

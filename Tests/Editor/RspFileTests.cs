@@ -145,6 +145,7 @@ public sealed class RspFileTests {
             "MODERN_CSHARP_9_OR_NEWER", "MODERN_CSHARP_10_OR_NEWER", "MODERN_CSHARP_11_OR_NEWER", "MODERN_CSHARP_NULLABLE",
         }));
         Assert.That(DefineSymbols.For(LanguageVersion.CSharp9, nullable: false), Is.EqualTo(new[] { "MODERN_CSHARP_9_OR_NEWER" }));
+        Assert.That(DefineSymbols.For(LanguageVersion.CSharp14, nullable: false), Has.Count.EqualTo(6).And.Member("MODERN_CSHARP_14_OR_NEWER"));
     }
 
     [Test]

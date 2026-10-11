@@ -2,7 +2,7 @@
 
 # Modern C# for Unity
 
-Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–12 и nullable в Unity 6:
+Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–14 и nullable в Unity 6:
 
 - добавляет страницу в Project Settings, которая создаёт и обновляет `csc.rsp` рядом с каждым `.asmdef` в `Assets`;
 - подключает через тот же `csc.rsp` source generator, который создаёт заглушки служебных типов, которых нет в `netstandard2.1`.
@@ -15,10 +15,10 @@ Unity-пакет `com.iacolyte.modern-csharp`. Он включает C# 10–12 
 https://github.com/iAcolyte/ModernCSharpForUnity.git
 ```
 
-Конкретная версия подключается по тегу: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0`. То же самое можно прописать в `Packages/manifest.json`:
+Конкретная версия подключается по тегу: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0`. То же самое можно прописать в `Packages/manifest.json`:
 
 ```json
-"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0"
+"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0"
 ```
 
 Требуется Unity 6000.0 или новее. Старшая доступная версия языка зависит от компилятора в редакторе:
@@ -26,7 +26,8 @@ https://github.com/iAcolyte/ModernCSharpForUnity.git
 | Unity | Roslyn | Версии языка |
 |---|---|---|
 | 6000.0 – 6000.4 | 4.3 | C# 9, 10 |
-| 6000.5 и новее | 4.10 | C# 9, 10, 11, 12 |
+| 6000.5 – 6000.6 | 4.10 | C# 9 – 12 |
+| 6000.7 и новее | 5.6 | C# 9 – 14 |
 
 ## Состав
 
@@ -80,7 +81,7 @@ Source~/                            # Unity её не видит
 | Символ | Когда определён |
 |---|---|
 | `MODERN_CSHARP_9_OR_NEWER` | Всегда. Отмечает сборку, которой управляет пакет. |
-| `MODERN_CSHARP_10_OR_NEWER` … `MODERN_CSHARP_12_OR_NEWER` | Language Version не ниже этой версии. |
+| `MODERN_CSHARP_10_OR_NEWER` … `MODERN_CSHARP_14_OR_NEWER` | Language Version не ниже этой версии. |
 | `MODERN_CSHARP_NULLABLE` | Nullable включён. |
 
 ```csharp
@@ -109,16 +110,16 @@ Source~/                            # Unity её не видит
 
 Чтобы изменить генератор, правь `Source~/` и запускай `Source~/build.sh`. Нужен .NET SDK, сборка идёт с `Microsoft.CodeAnalysis.CSharp` 4.3: генератор не должен ссылаться на Roslyn новее, чем у компилятора Unity (4.3 в Unity 6000.0–6000.4).
 
-## C# 10–12 в Unity
+## C# 10–14 в Unity
 
 Всё, что появилось в языке после C# 9, с пометкой, работает ли это в Unity, где это применять и пример на игровом коде.
 
 | Статус | Фич |
 |---|---|
-| ✅ Работает | 30 |
-| 🧩 Нужна заглушка | 5 |
-| ⚠️ С оговорками | 1 |
-| ❌ Не работает | 5 |
+| ✅ Работает | 43 |
+| 🧩 Нужна заглушка | 7 |
+| ⚠️ С оговорками | 2 |
+| ❌ Не работает | 7 |
 
 ### C# 10
 
@@ -843,6 +844,321 @@ public struct WheelBuffer
 public static void Log_Intercepted(string msg) { }
 ```
 
+### C# 13
+
+_ноябрь 2024 · .NET 9_
+
+#### `params` collections
+
+**✅ Работает**
+
+**Где:** методы с переменным числом аргументов, которые должны принимать не только массив, но и `Span`, `List` или `IEnumerable`.
+
+> В `netstandard2.1` нет inline arrays, поэтому `params ReadOnlySpan<T>` всё равно выделяет массив на каждый вызов, в отличие от .NET 9.
+
+```csharp
+public static int Total(params ReadOnlySpan<int> hits)
+{
+    var sum = 0;
+    foreach (var hit in hits) sum += hit;
+    return sum;
+}
+
+public void AddTags(params IEnumerable<string> tags) => _tags.UnionWith(tags);
+
+var damage = Total(10, 25, 5);
+AddTags("fire", "crit");
+```
+
+#### The `\e` escape sequence
+
+**✅ Работает**
+
+**Где:** ANSI-цвета в выводе билд-скриптов и консольных утилит. Заменяет `\u001b` и `\x1b`.
+
+```csharp
+public const string Red = "\e[31m";
+public const string Reset = "\e[0m";
+
+Console.WriteLine($"{Red}Build failed{Reset}");
+```
+
+#### Implicit index access in object initializers
+
+**✅ Работает**
+
+**Где:** заполнение последних элементов массива или буфера прямо в инициализаторе через `^`.
+
+```csharp
+var hotbar = new Hotbar
+{
+    Slots = { [0] = "sword", [^1] = "potion" }
+};
+```
+
+#### ref and unsafe in iterators and async methods
+
+**✅ Работает**
+
+**Где:** локальные `Span` и `ref` внутри итераторов и `async`-методов: разбор строки или буфера между двумя `await`.
+
+> Локальный `Span` или `ref` не может пережить `yield return` или `await`: закончи работу с ним до следующего.
+
+```csharp
+public static IEnumerable<int> Lengths(string[] lines)
+{
+    foreach (var line in lines)
+    {
+        ReadOnlySpan<char> trimmed = line.AsSpan().Trim();
+        var length = trimmed.Length;
+        yield return length;
+    }
+}
+```
+
+#### Partial properties and indexers
+
+**✅ Работает**
+
+**Где:** source generators: ты объявляешь свойство, генератор пишет аксессоры. Типично для MVVM и реактивных моделей.
+
+```csharp
+public partial class PlayerModel
+{
+    [Observable] public partial int Health { get; set; }
+}
+
+// Сгенерированная половина
+public partial class PlayerModel
+{
+    private int _health;
+    public partial int Health
+    {
+        get => _health;
+        set { _health = value; HealthChanged?.Invoke(value); }
+    }
+}
+```
+
+#### Method group natural type
+
+**✅ Работает**
+
+**Где:** `var` для группы методов, когда есть метод расширения с тем же именем. Компилятор теперь сначала смотрит на методы экземпляра.
+
+```csharp
+// У Cooldown есть Reset(), а расширение добавляет Reset(float delay)
+var reset = cooldown.Reset; // Action; до C# 13 была ошибка
+button.onClick.AddListener(new UnityAction(reset));
+```
+
+#### [OverloadResolutionPriority]
+
+**🧩 Нужна заглушка**
+
+**Где:** библиотечный код: новая, более дешёвая перегрузка выигрывает у старой, а существующие вызовы не ломаются.
+
+> Заглушка: `OverloadResolutionPriorityAttribute`.
+
+```csharp
+public static void Write(string message) { }
+
+[OverloadResolutionPriority(1)]
+public static void Write(ReadOnlySpan<char> message) { }
+
+Write("spawned"); // выберет перегрузку с ReadOnlySpan<char>
+```
+
+#### The Lock type
+
+**❌ Не работает**
+
+**Где было бы:** отдельный объект блокировки, в который `lock` входит быстрее, чем в `Monitor` по обычному `object`.
+
+> `System.Threading.Lock` — тип из .NET 9, в `netstandard2.1` его нет. Заглушки для него в пакете нет: копия поверх `Monitor` не даёт выигрыша в скорости, а `internal`-тип с именем `Lock` в каждой сборке конфликтовал бы с чужими типами с тем же именем. Используй блокировку по обычному `object`.
+
+```csharp
+private readonly Lock _gate = new(); // CS0246: Lock не найден
+
+private readonly object _gate = new(); // работает везде
+```
+
+#### ref struct interfaces
+
+**⚠️ С оговорками**
+
+**Где:** объявить, что `ref struct` следует контракту.
+
+> Объявление компилируется, но передать `ref struct` в обобщённый код можно только через `allows ref struct`, а он не работает. Интерфейс полезен только как документация.
+
+```csharp
+public ref struct SpanReader : IReader
+{
+    private ReadOnlySpan<byte> _data;
+    public int Read() { /* ... */ }
+}
+
+// Parse<T>(T reader) where T : IReader
+Parse(new SpanReader(bytes)); // CS9244
+```
+
+#### allows ref struct
+
+**❌ Не работает**
+
+**Где было бы:** обобщённые методы и типы, которые принимают `Span<T>` и другие `ref struct` как аргументы типа.
+
+> Нужна поддержка среды выполнения. Пиши перегрузки для `Span<T>` и `ReadOnlySpan<T>` вручную.
+
+```csharp
+public static int Count<T>(T source) where T : allows ref struct => 0; // CS9240
+```
+
+### C# 14
+
+_ноябрь 2025 · .NET 10_
+
+#### Extension members
+
+**✅ Работает**
+
+**Где:** свойства-расширения, статические члены и операторы для типов Unity и сторонних типов: `transform.IsRoot`, `Vector3.Random`.
+
+> Свойства-расширения не сериализуются и не видны в инспекторе.
+
+```csharp
+public static class TransformExtensions
+{
+    extension(Transform transform)
+    {
+        public bool IsRoot => transform.parent == null;
+
+        public void ResetLocal()
+        {
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+        }
+    }
+
+    extension(Vector3)
+    {
+        public static Vector3 Random => new(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value);
+    }
+}
+
+if (transform.IsRoot) transform.ResetLocal();
+var point = Vector3.Random;
+```
+
+#### The field keyword
+
+**✅ Работает**
+
+**Где:** свойства с проверкой или уведомлением об изменении, без объявления поля вручную.
+
+> Скрытое поле не сериализуется: для данных инспектора оставь явное поле с `[SerializeField]`. Если в классе уже есть член с именем `field`, обращайся к нему как `this.field` или `@field`.
+
+```csharp
+public string Name
+{
+    get;
+    set => field = value.Trim();
+} = "";
+
+public int Level
+{
+    get;
+    set => field = Mathf.Max(1, value);
+} = 1;
+```
+
+#### Null-conditional assignment
+
+**✅ Работает**
+
+**Где:** присваивание и подписка, когда объекта может не быть, без отдельного `if`.
+
+> Для объектов Unity `?.` не учитывает фальшивый null, см. [Что помнить в Unity](#что-помнить-в-unity): для уничтоженных объектов оставь `if (obj != null)`.
+
+```csharp
+_target?.Health = 0;
+_hud?.Score += 10;
+_enemy?.Died += OnEnemyDied;
+```
+
+#### nameof with unbound generic types
+
+**✅ Работает**
+
+**Где:** имена обобщённых типов в логах и ключах без выдуманного аргумента типа.
+
+```csharp
+Debug.Log($"{nameof(ObjectPool<>)} is empty"); // "ObjectPool"
+var key = nameof(Dictionary<,>);
+```
+
+#### Implicit span conversions
+
+**✅ Работает**
+
+**Где:** передача массивов в методы, которые принимают `Span<T>` или `ReadOnlySpan<T>`, включая обобщённые методы и методы расширения для span.
+
+> Меняется выбор перегрузок: там, где подходят и перегрузка с массивом или `IEnumerable<T>`, и перегрузка со span, C# 14 может выбрать span. Проверь такие вызовы после повышения версии.
+
+```csharp
+static float Average(ReadOnlySpan<float> values) { /* ... */ }
+static void Shuffle<T>(Span<T> items) { /* ... */ }
+
+float[] samples = GetSamples();
+var average = Average(samples);
+Shuffle(_deck); // T выводится из массива
+```
+
+#### Modifiers on simple lambda parameters
+
+**✅ Работает**
+
+**Где:** лямбды с параметрами `out`, `ref`, `in` или `scoped` без указания типов.
+
+```csharp
+public delegate bool TryParse<T>(string text, out T value);
+
+TryParse<int> parseInt = (text, out value) => int.TryParse(text, out value);
+```
+
+#### Partial constructors and events
+
+**✅ Работает**
+
+**Где:** source generators, которые реализуют объявленный тобой конструктор или событие, например слабые подписки на события.
+
+```csharp
+public partial class Inventory
+{
+    public partial Inventory(int capacity);
+    public partial event Action Changed;
+}
+```
+
+#### User-defined compound assignment operators
+
+**🧩 Нужна заглушка**
+
+**Где:** `+=`, `-=`, `++` для класса, которые меняют объект на месте и не создают новый: накопители, большие векторы, матрицы.
+
+> Заглушка: `CompilerFeatureRequiredAttribute`, та же, что нужна для `required`.
+
+```csharp
+public sealed class DamageBuffer
+{
+    public float Total;
+
+    public void operator +=(float amount) => Total += amount;
+}
+
+buffer += 12.5f; // меняет объект на месте, без нового экземпляра
+```
+
 ## Заглушки
 
 Генератор создаёт их как `internal`-типы, исходники лежат в [`Source~/ModernCSharp.Generators/Polyfills.cs`](Source~/ModernCSharp.Generators/Polyfills.cs).
@@ -859,6 +1175,7 @@ public static void Log_Intercepted(string msg) { }
 | `UnscopedRefAttribute` | `System.Diagnostics.CodeAnalysis` | Возврат ссылки на поле структуры |
 | `CollectionBuilderAttribute` | `System.Runtime.CompilerServices` | Collection expressions для своих коллекций |
 | `ExperimentalAttribute` | `System.Diagnostics.CodeAnalysis` | `[Experimental]` |
+| `OverloadResolutionPriorityAttribute` | `System.Runtime.CompilerServices` | `[OverloadResolutionPriority]` |
 
 Правила:
 
@@ -869,7 +1186,8 @@ public static void Log_Intercepted(string msg) { }
 
 - static abstract/virtual члены интерфейсов: ошибка CS8919;
 - `ref`-поля: ошибка CS9064;
-- inline arrays: код соберётся, но работать не будет.
+- inline arrays: код соберётся, но работать не будет;
+- `allows ref struct`: ошибка CS9240.
 
 ## Что помнить в Unity
 
@@ -881,7 +1199,7 @@ public static void Log_Intercepted(string msg) { }
 
 ---
 
-Статусы проверены компиляцией Roslyn 4.10 из Unity 6000.6.3f1 под `netstandard2.1`. Для C# 11 и 12 нужна Unity 6000.5 или новее. Поведение во время выполнения для record, `required`, атрибутов-заглушек, своих обработчиков интерполированных строк, collection expressions, generic-атрибутов и конструкторов struct без параметров проверено в Mono (редактор) и IL2CPP (плеер macOS).
+Статусы проверены компиляцией под `netstandard2.1`: C# 10–12 — Roslyn 4.10 из Unity 6000.6.3f1, C# 13–14 — Roslyn 5.6 из Unity 6000.7.0b4 (бета). Для C# 11 и 12 нужна Unity 6000.5 или новее, для C# 13 и 14 — Unity 6000.7 или новее. Статусы C# 13–14 проверены только компиляцией: поведение во время выполнения в Unity не проверялось. Поведение во время выполнения для record, `required`, атрибутов-заглушек, своих обработчиков интерполированных строк, collection expressions, generic-атрибутов и конструкторов struct без параметров проверено в Mono (редактор) и IL2CPP (плеер macOS).
 
 ## Тесты
 
@@ -892,7 +1210,7 @@ dotnet test "Source~/ModernCSharp.sln"
 ```
 
 - генератор создаёт все заглушки как `internal`, пропускает типы, которые сборка уже видит, и ссылается на Roslyn не новее, чем в Unity;
-- у каждой фичи из раздела [C# 10–12 в Unity](#c-1012-в-unity) есть сниппет в `Source~/ModernCSharp.Generators.Tests/Features/`. Он компилируется Roslyn 4.10 под `netstandard2.1`, как в Unity 6000.6. Тест проверяет статус из README и падает, если README и сниппеты расходятся.
+- у каждой фичи из раздела [C# 10–14 в Unity](#c-1014-в-unity) есть сниппет в `Source~/ModernCSharp.Generators.Tests/Features/`. Он компилируется Roslyn 5.6 под `netstandard2.1` той версией языка, в которой фича появилась, как в Unity 6000.7. Тест проверяет статус из README и падает, если README и сниппеты расходятся.
 
 Когда Unity обновит компилятор, подними версию `Microsoft.CodeAnalysis.CSharp` в тестовом проекте и посмотри, какие статусы изменились.
 

@@ -2,7 +2,7 @@
 
 # Modern C# for Unity
 
-The `com.iacolyte.modern-csharp` Unity package enables C# 10–12 and nullable reference types in Unity 6:
+The `com.iacolyte.modern-csharp` Unity package enables C# 10–14 and nullable reference types in Unity 6:
 
 - it adds a Project Settings page that creates and updates `csc.rsp` next to every `.asmdef` in `Assets`;
 - it adds a source generator, connected through the same `csc.rsp`, that emits polyfills for compiler-required types that `netstandard2.1` lacks.
@@ -15,10 +15,10 @@ Open **Window → Package Manager → + → Add package from git URL** and enter
 https://github.com/iAcolyte/ModernCSharpForUnity.git
 ```
 
-To pin a specific version, add a tag: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0`. You can also add it to `Packages/manifest.json`:
+To pin a specific version, add a tag: `https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0`. You can also add it to `Packages/manifest.json`:
 
 ```json
-"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.1.0"
+"com.iacolyte.modern-csharp": "https://github.com/iAcolyte/ModernCSharpForUnity.git#v0.2.0"
 ```
 
 Requires Unity 6000.0 or newer. The highest language version depends on the compiler the editor ships with:
@@ -26,7 +26,8 @@ Requires Unity 6000.0 or newer. The highest language version depends on the comp
 | Unity | Roslyn | Language versions |
 |---|---|---|
 | 6000.0 – 6000.4 | 4.3 | C# 9, 10 |
-| 6000.5 and newer | 4.10 | C# 9, 10, 11, 12 |
+| 6000.5 – 6000.6 | 4.10 | C# 9 – 12 |
+| 6000.7 and newer | 5.6 | C# 9 – 14 |
 
 ## Contents
 
@@ -80,7 +81,7 @@ Every managed `csc.rsp` also gets a `-define:` line, so code can check the selec
 | Symbol | When it is defined |
 |---|---|
 | `MODERN_CSHARP_9_OR_NEWER` | Always. Marks an assembly managed by the package. |
-| `MODERN_CSHARP_10_OR_NEWER` … `MODERN_CSHARP_12_OR_NEWER` | Language Version is at least that version. |
+| `MODERN_CSHARP_10_OR_NEWER` … `MODERN_CSHARP_14_OR_NEWER` | Language Version is at least that version. |
 | `MODERN_CSHARP_NULLABLE` | Nullable is on. |
 
 ```csharp
@@ -109,16 +110,16 @@ The polyfills are produced by a Roslyn source generator. The tool adds it to eve
 
 To change the generator, edit `Source~/` and run `Source~/build.sh`. It needs the .NET SDK and builds against `Microsoft.CodeAnalysis.CSharp` 4.3: the generator must not reference a newer Roslyn than Unity's compiler (4.3 in Unity 6000.0–6000.4).
 
-## C# 10–12 in Unity
+## C# 10–14 in Unity
 
 Everything added to the language after C# 9, marked with whether it works in Unity, where to use it, and an example in game code.
 
 | Status | Features |
 |---|---|
-| ✅ Works | 30 |
-| 🧩 Needs a polyfill | 5 |
-| ⚠️ With caveats | 1 |
-| ❌ Doesn't work | 5 |
+| ✅ Works | 43 |
+| 🧩 Needs a polyfill | 7 |
+| ⚠️ With caveats | 2 |
+| ❌ Doesn't work | 7 |
 
 ### C# 10
 
@@ -843,6 +844,321 @@ public struct WheelBuffer
 public static void Log_Intercepted(string msg) { }
 ```
 
+### C# 13
+
+_November 2024 · .NET 9_
+
+#### `params` collections
+
+**✅ Works**
+
+**Where:** methods with a variable number of arguments that should also accept a `Span`, `List` or `IEnumerable`, not just an array.
+
+> `netstandard2.1` has no inline arrays, so `params ReadOnlySpan<T>` still allocates an array per call, unlike in .NET 9.
+
+```csharp
+public static int Total(params ReadOnlySpan<int> hits)
+{
+    var sum = 0;
+    foreach (var hit in hits) sum += hit;
+    return sum;
+}
+
+public void AddTags(params IEnumerable<string> tags) => _tags.UnionWith(tags);
+
+var damage = Total(10, 25, 5);
+AddTags("fire", "crit");
+```
+
+#### The `\e` escape sequence
+
+**✅ Works**
+
+**Where:** ANSI colors in the output of build scripts and command-line tools. Replaces `\u001b` and `\x1b`.
+
+```csharp
+public const string Red = "\e[31m";
+public const string Reset = "\e[0m";
+
+Console.WriteLine($"{Red}Build failed{Reset}");
+```
+
+#### Implicit index access in object initializers
+
+**✅ Works**
+
+**Where:** filling the last elements of an array or buffer right in the initializer with `^`.
+
+```csharp
+var hotbar = new Hotbar
+{
+    Slots = { [0] = "sword", [^1] = "potion" }
+};
+```
+
+#### ref and unsafe in iterators and async methods
+
+**✅ Works**
+
+**Where:** `Span` and `ref` locals inside coroutine-like iterators and `async` methods: parsing a line or a buffer between two `await`s.
+
+> A `Span` or `ref` local can't live across `yield return` or `await`: finish working with it before the next one.
+
+```csharp
+public static IEnumerable<int> Lengths(string[] lines)
+{
+    foreach (var line in lines)
+    {
+        ReadOnlySpan<char> trimmed = line.AsSpan().Trim();
+        var length = trimmed.Length;
+        yield return length;
+    }
+}
+```
+
+#### Partial properties and indexers
+
+**✅ Works**
+
+**Where:** source generators: you declare the property, the generator writes the accessors. Typical for MVVM and reactive models.
+
+```csharp
+public partial class PlayerModel
+{
+    [Observable] public partial int Health { get; set; }
+}
+
+// Generated half
+public partial class PlayerModel
+{
+    private int _health;
+    public partial int Health
+    {
+        get => _health;
+        set { _health = value; HealthChanged?.Invoke(value); }
+    }
+}
+```
+
+#### Method group natural type
+
+**✅ Works**
+
+**Where:** `var` for a method group when an extension method with the same name exists. The compiler now looks at instance methods first.
+
+```csharp
+// Cooldown has Reset(), and an extension adds Reset(float delay)
+var reset = cooldown.Reset; // Action; an error before C# 13
+button.onClick.AddListener(new UnityAction(reset));
+```
+
+#### [OverloadResolutionPriority]
+
+**🧩 Needs a polyfill**
+
+**Where:** library code: making a new, cheaper overload win over an old one without breaking existing callers.
+
+> Polyfill: `OverloadResolutionPriorityAttribute`.
+
+```csharp
+public static void Write(string message) { }
+
+[OverloadResolutionPriority(1)]
+public static void Write(ReadOnlySpan<char> message) { }
+
+Write("spawned"); // picks the ReadOnlySpan<char> overload
+```
+
+#### The Lock type
+
+**❌ Doesn't work**
+
+**Would be used for:** a dedicated lock object that `lock` enters faster than a `Monitor` on a plain `object`.
+
+> `System.Threading.Lock` is a .NET 9 type and `netstandard2.1` doesn't have it. The package doesn't polyfill it: a copy built on `Monitor` would give no speedup, and an `internal` type named `Lock` in every assembly would clash with other types of the same name. Lock on a plain `object`.
+
+```csharp
+private readonly Lock _gate = new(); // CS0246: Lock not found
+
+private readonly object _gate = new(); // works everywhere
+```
+
+#### ref struct interfaces
+
+**⚠️ With caveats**
+
+**Where:** declaring that a `ref struct` follows a contract.
+
+> The declaration compiles, but a `ref struct` can be passed to generic code only through `allows ref struct`, which doesn't work. The interface is useful only as documentation.
+
+```csharp
+public ref struct SpanReader : IReader
+{
+    private ReadOnlySpan<byte> _data;
+    public int Read() { /* ... */ }
+}
+
+// Parse<T>(T reader) where T : IReader
+Parse(new SpanReader(bytes)); // CS9244
+```
+
+#### allows ref struct
+
+**❌ Doesn't work**
+
+**Would be used for:** generic methods and types that accept `Span<T>` and other `ref struct` types as type arguments.
+
+> Requires runtime support. Write overloads for `Span<T>` and `ReadOnlySpan<T>` by hand.
+
+```csharp
+public static int Count<T>(T source) where T : allows ref struct => 0; // CS9240
+```
+
+### C# 14
+
+_November 2025 · .NET 10_
+
+#### Extension members
+
+**✅ Works**
+
+**Where:** extension properties, static members and operators for Unity types and third-party types: `transform.IsRoot`, `Vector3.Random`.
+
+> Extension properties are not serialized and don't appear in the inspector.
+
+```csharp
+public static class TransformExtensions
+{
+    extension(Transform transform)
+    {
+        public bool IsRoot => transform.parent == null;
+
+        public void ResetLocal()
+        {
+            transform.localPosition = Vector3.zero;
+            transform.localRotation = Quaternion.identity;
+        }
+    }
+
+    extension(Vector3)
+    {
+        public static Vector3 Random => new(UnityEngine.Random.value, UnityEngine.Random.value, UnityEngine.Random.value);
+    }
+}
+
+if (transform.IsRoot) transform.ResetLocal();
+var point = Vector3.Random;
+```
+
+#### The field keyword
+
+**✅ Works**
+
+**Where:** properties with validation or a change notification, without declaring the backing field by hand.
+
+> The hidden field is not serialized: for inspector data keep an explicit `[SerializeField]` field. If the class already has a member named `field`, refer to it as `this.field` or `@field`.
+
+```csharp
+public string Name
+{
+    get;
+    set => field = value.Trim();
+} = "";
+
+public int Level
+{
+    get;
+    set => field = Mathf.Max(1, value);
+} = 1;
+```
+
+#### Null-conditional assignment
+
+**✅ Works**
+
+**Where:** assigning and subscribing when the object may be missing, without a separate `if`.
+
+> On Unity objects `?.` ignores fake null, see [Unity gotchas](#unity-gotchas): for destroyed objects keep `if (obj != null)`.
+
+```csharp
+_target?.Health = 0;
+_hud?.Score += 10;
+_enemy?.Died += OnEnemyDied;
+```
+
+#### nameof with unbound generic types
+
+**✅ Works**
+
+**Where:** names of generic types in logs and keys without inventing a type argument.
+
+```csharp
+Debug.Log($"{nameof(ObjectPool<>)} is empty"); // "ObjectPool"
+var key = nameof(Dictionary<,>);
+```
+
+#### Implicit span conversions
+
+**✅ Works**
+
+**Where:** passing arrays to methods that take `Span<T>` or `ReadOnlySpan<T>`, including generic methods and extension methods on spans.
+
+> Overload resolution changes: where both an array or `IEnumerable<T>` overload and a span overload fit, C# 14 may now pick the span one. Check such calls after raising the version.
+
+```csharp
+static float Average(ReadOnlySpan<float> values) { /* ... */ }
+static void Shuffle<T>(Span<T> items) { /* ... */ }
+
+float[] samples = GetSamples();
+var average = Average(samples);
+Shuffle(_deck); // T is inferred from the array
+```
+
+#### Modifiers on simple lambda parameters
+
+**✅ Works**
+
+**Where:** lambdas with `out`, `ref`, `in` or `scoped` parameters without spelling out the types.
+
+```csharp
+public delegate bool TryParse<T>(string text, out T value);
+
+TryParse<int> parseInt = (text, out value) => int.TryParse(text, out value);
+```
+
+#### Partial constructors and events
+
+**✅ Works**
+
+**Where:** source generators that implement a constructor or an event you declared, e.g. weak event subscriptions.
+
+```csharp
+public partial class Inventory
+{
+    public partial Inventory(int capacity);
+    public partial event Action Changed;
+}
+```
+
+#### User-defined compound assignment operators
+
+**🧩 Needs a polyfill**
+
+**Where:** `+=`, `-=`, `++` on a class that change the object in place instead of creating a new one: accumulators, large vectors, matrices.
+
+> Polyfill: `CompilerFeatureRequiredAttribute`, the same one `required` members use.
+
+```csharp
+public sealed class DamageBuffer
+{
+    public float Total;
+
+    public void operator +=(float amount) => Total += amount;
+}
+
+buffer += 12.5f; // changes the object in place, no new instance
+```
+
 ## Polyfills
 
 The generator emits them as `internal` types; the sources are in [`Source~/ModernCSharp.Generators/Polyfills.cs`](Source~/ModernCSharp.Generators/Polyfills.cs).
@@ -859,6 +1175,7 @@ The generator emits them as `internal` types; the sources are in [`Source~/Moder
 | `UnscopedRefAttribute` | `System.Diagnostics.CodeAnalysis` | Returning a reference to a struct field |
 | `CollectionBuilderAttribute` | `System.Runtime.CompilerServices` | Collection expressions for custom collections |
 | `ExperimentalAttribute` | `System.Diagnostics.CodeAnalysis` | `[Experimental]` |
+| `OverloadResolutionPriorityAttribute` | `System.Runtime.CompilerServices` | `[OverloadResolutionPriority]` |
 
 Rules:
 
@@ -869,7 +1186,8 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 
 - static abstract/virtual interface members: error CS8919;
 - `ref` fields: error CS9064;
-- inline arrays: the code compiles but won't work.
+- inline arrays: the code compiles but won't work;
+- `allows ref struct`: error CS9240.
 
 ## Unity gotchas
 
@@ -881,7 +1199,7 @@ Polyfills can't enable features that need runtime support, which Mono and IL2CPP
 
 ---
 
-Statuses were verified by compiling with Roslyn 4.10 from Unity 6000.6.3f1 against `netstandard2.1`. C# 11 and 12 need Unity 6000.5 or newer. Runtime behavior of records, `required`, polyfilled attributes, custom interpolated string handlers, collection expressions, generic attributes and parameterless struct constructors was verified in Mono (editor) and IL2CPP (macOS player).
+Statuses were verified by compiling against `netstandard2.1`: C# 10–12 with Roslyn 4.10 from Unity 6000.6.3f1, C# 13–14 with Roslyn 5.6 from Unity 6000.7.0b4, a beta. C# 11 and 12 need Unity 6000.5 or newer, C# 13 and 14 need Unity 6000.7 or newer. C# 13–14 statuses are compile-only: their runtime behavior in Unity has not been verified. Runtime behavior of records, `required`, polyfilled attributes, custom interpolated string handlers, collection expressions, generic attributes and parameterless struct constructors was verified in Mono (editor) and IL2CPP (macOS player).
 
 ## Tests
 
@@ -892,7 +1210,7 @@ dotnet test "Source~/ModernCSharp.sln"
 ```
 
 - the generator emits every polyfill as `internal`, skips types the assembly already sees and references Roslyn no newer than Unity's;
-- every feature from [C# 10–12 in Unity](#c-1012-in-unity) has a snippet in `Source~/ModernCSharp.Generators.Tests/Features/`, compiled with Roslyn 4.10 against `netstandard2.1`, the way Unity 6000.6 compiles it. The test checks the status from this README and fails if the README and the snippets disagree.
+- every feature from [C# 10–14 in Unity](#c-1014-in-unity) has a snippet in `Source~/ModernCSharp.Generators.Tests/Features/`, compiled with Roslyn 5.6 against `netstandard2.1` as the language version it was added in, the way Unity 6000.7 compiles it. The test checks the status from this README and fails if the README and the snippets disagree.
 
 When Unity updates its compiler, raise `Microsoft.CodeAnalysis.CSharp` in the test project and see which statuses change.
 

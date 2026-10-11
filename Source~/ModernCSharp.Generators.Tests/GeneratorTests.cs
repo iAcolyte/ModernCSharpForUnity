@@ -20,6 +20,7 @@ public sealed class GeneratorTests {
         "System.Diagnostics.CodeAnalysis.UnscopedRefAttribute",
         "System.Runtime.CompilerServices.CollectionBuilderAttribute",
         "System.Diagnostics.CodeAnalysis.ExperimentalAttribute",
+        "System.Runtime.CompilerServices.OverloadResolutionPriorityAttribute",
     };
 
     const string IsExternalInitHint = "ModernCSharp.IsExternalInit.g.cs";
@@ -40,6 +41,8 @@ public sealed class GeneratorTests {
     [TestCase(LanguageVersion.CSharp10)]
     [TestCase(LanguageVersion.CSharp11)]
     [TestCase(LanguageVersion.CSharp12)]
+    [TestCase(LanguageVersion.CSharp13)]
+    [TestCase(LanguageVersion.CSharp14)]
     public void GeneratedCodeHasNoDiagnostics(LanguageVersion version) {
         var result = TestCompiler.Compile("", version);
 

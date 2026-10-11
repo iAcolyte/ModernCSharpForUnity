@@ -4,7 +4,7 @@ using Microsoft.CodeAnalysis;
 
 namespace ModernCSharp.Generators;
 
-// Adds internal copies of the compiler types netstandard2.1 lacks for C# 9–12 features.
+// Adds internal copies of the compiler types netstandard2.1 lacks for C# 9–14 features.
 // A type is skipped when the compilation can already see one, so there are no CS0433/CS0436 conflicts.
 [Generator(LanguageNames.CSharp)]
 public sealed class PolyfillGenerator: IIncrementalGenerator {

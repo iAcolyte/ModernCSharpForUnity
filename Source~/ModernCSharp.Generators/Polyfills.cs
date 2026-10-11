@@ -156,5 +156,19 @@ static class Polyfills {
                     public string? UrlFormat { get; set; }
                 }
             """),
+
+        // C# 13 [OverloadResolutionPriority].
+        new(CompilerServices, "OverloadResolutionPriorityAttribute", """
+                [global::System.AttributeUsage(global::System.AttributeTargets.Method | global::System.AttributeTargets.Constructor | global::System.AttributeTargets.Property, AllowMultiple = false, Inherited = false)]
+                internal sealed class OverloadResolutionPriorityAttribute : global::System.Attribute
+                {
+                    public OverloadResolutionPriorityAttribute(int priority)
+                    {
+                        Priority = priority;
+                    }
+
+                    public int Priority { get; }
+                }
+            """),
     };
 }
